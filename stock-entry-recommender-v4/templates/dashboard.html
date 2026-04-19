@@ -823,13 +823,14 @@
         <!-- Text search: filters by symbol, name, sector, etc. -->
         <input id="search" placeholder="Search stock..." />
         <!-- Recommendation filter: matches recommendation text inside row -->
-        <select id="rec">
-          <option value="">All</option>
-          <option>Strong Buy</option>
-          <option>Accumulate</option>
-          <option>Watch</option>
-          <option>Avoid</option>
-        </select>
+        <select id="signal-filter">
+		  <option value="">All</option>
+		  <option value="Strong accumulation">Strong accumulation</option>
+		  <option value="Breakout candidate">Breakout candidate</option>
+		  <option value="Accumulation phase">Accumulation phase</option>
+		  <option value="Distribution risk">Distribution risk</option>
+		  <option value="Neutral">Neutral</option>
+		</select>
       </div>
     </div>
 
@@ -933,12 +934,31 @@
     //    - To make filter stricter (e.g., based only on the
     //      recommendation pill), pick that specific <td>.
     // ---------------------------------------------------------
-    document.getElementById('rec').onchange = function(){
-      let v = this.value;
-      document.querySelectorAll('#table tbody tr').forEach(r =>
-        r.style.display = (!v || r.innerText.includes(v)) ? '' : 'none'
-      );
-    };
+    const signalSelect = document.getElementById('signal-filter');
+
+	signalSelect.onchange = function(){
+	  const selected = this.value;               // e.g. "Strong accumulation" or ""
+	  const rows = document.querySelectorAll('#table tbody tr');
+
+	  rows.forEach(row => {
+		if (!selected) {
+		  // "All" selected: show everything
+		  row.style.display = '';
+		  return;
+		}
+
+		// Find the signal pill cell’s text in this row
+		const signalCell = row.querySelector('td:nth-child(4) .pill');
+		// (4th column is "Signal" based on your table markup; adjust nth-child if you move columns)
+
+		const signalText = signalCell
+		  ? signalCell.textContent.trim()
+		  : '';
+
+		// Exact match between dropdown value and signal text
+		row.style.display = (signalText === selected) ? '' : 'none';
+	  });
+	};
 
     // ---------------------------------------------------------
     // 3. THEME TOGGLE WITH LOCALSTORAGE
