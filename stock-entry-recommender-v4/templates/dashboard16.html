@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stock Recommendation System</title>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet" />
+  <style>
+    body{font-family:'Satoshi',sans-serif;background:#f0f0f0;margin:0;color:#1e293b}
+    .shell{max-width:1400px;margin:auto;padding:20px}
+    .header{text-align:center;padding:30px 20px;border-radius:16px;background:#fff;border:1px solid #e5e7eb;margin-bottom:20px}
+    .header h1{margin:0;font-size:28px}
+    .header p{color:#6b7280;margin-top:6px}
+    .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+    .kpi>div{background:#fff;border:1px solid #e5e7eb;padding:16px;border-radius:12px;text-align:center}
+    .kpi b{font-size:28px;font-weight:700;display:block}
+    .kpi div:nth-child(1) b{color:#ef4444}
+    .kpi div:nth-child(2) b{color:#6b7280}
+    .kpi div:nth-child(3) b{color:#ef4444}
+    .kpi div:nth-child(4) b{color:#6b7280}
+    .kpi span{font-size:12px;color:#6b7280}
+    .upload-card{background:#fff7ed;border:1px solid #facc15;border-radius:12px;padding:16px}
+    .upload-card input{width:100%;margin-top:8px}
+    .upload-card button{width:100%;margin-top:6px;padding:6px;border-radius:8px;border:none;cursor:pointer}
+    .panel{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-top:16px}
+    .grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px}
+    .score{color:#ef4444;font-weight:700}
+    .pill{display:inline-block;margin-top:6px;padding:5px 10px;border-radius:999px;font-size:12px}
+    .sb{background:#d1fae5;color:#065f46}
+    .acc{background:#e0e7ff;color:#3730a3}
+    .watch{background:#fef3c7;color:#92400e}
+    .avoid{background:#fee2e2;color:#7f1d1d}
+    .signal{background:#f3f4f6;color:#374151}
+    .small{font-size:12px;color:#6b7280}
+    .filters{display:flex;gap:10px;flex-wrap:wrap}
+    .filters input,.filters select{flex:1;padding:10px;border-radius:10px;border:1px solid #e5e7eb}
+    .table-wrap{max-height:420px;overflow-y:auto}
+    table{width:100%;border-collapse:collapse}
+    th{background:#f9fafb;position:sticky;top:0}
+    th,td{padding:10px;border-bottom:1px solid #e5e7eb}
+    td.num{text-align:right}
+
+    /* stacked symbol styling */
+    .symbol-cell{min-width:220px}
+    .symbol-code{font-weight:700;font-size:14px;margin-bottom:2px}
+    .symbol-name{font-size:12px;color:#6b7280;line-height:1.35}
+
+    /* layout for rules + cards */
+    .row-2col{display:grid;grid-template-columns:1.8fr 1.2fr;gap:16px;align-items:flex-start}
+    @media (max-width: 1024px){
+      .row-2col{grid-template-columns:1fr}
+    }
+
+    /* legacy reference styles (safe to keep or remove) */
+    .table-wrap-reference{max-height:560px;overflow:auto;border-radius:12px}
+    .table-reference{min-width:1180px}
+    .table-reference th{background:#fff;vertical-align:top;font-size:13px;font-weight:700;padding:16px 12px}
+    .table-reference td{padding:16px 12px;vertical-align:top;background:#fff}
+    .table-reference .date-cell{min-width:88px;white-space:normal;word-break:break-word;color:#111827}
+    .table-reference .symbol-cell{min-width:220px}
+    .table-reference .symbol-code{font-weight:700;font-size:15px;margin-bottom:4px;color:#111827}
+    .table-reference .symbol-name{color:#6b7280;line-height:1.45}
+    .table-reference .sector-cell{min-width:150px}
+    .table-reference .num{white-space:nowrap}
+    .sig-breakout,.sig-repeated{background:#e5efdc;color:#54733b}
+    .sig-quiet,.sig-accum,.sig-watch,.sig-risk{background:#dce8ee;color:#255f79}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="header">
+      <h1>Stock Recommendation System</h1>
+      <p>Identify pre-breakout opportunities using delivery, momentum & institutional patterns</p>
+    </div>
+
+    <div class="kpi">
+      <div><b>{{ summary.rows }}</b><span>Total Stocks</span></div>
+      <div><b>{{ summary.avg_score }}</b><span>Avg Score</span></div>
+      <div><b>{{ summary.strong_buys }}</b><span>Strong Buy</span></div>
+      <div><b>{{ summary.watchlist }}</b><span>Watchlist</span></div>
+
+      <div class="upload-card">
+        <b>Upload</b>
+        <form action="/upload" method="POST" enctype="multipart/form-data">
+          <input type="file" name="files" multiple required />
+          <button style="background:#16a34a;color:white">Upload</button>
+        </form>
+        <form action="/clear-uploads" method="POST">
+          <button style="background:#ef4444;color:white">Clear</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Top + Pre-breakout on left, Rules on right -->
+    <div class="row-2col">
+      <!-- LEFT COLUMN: Top + Pre-Breakout -->
+      <div>
+        <div class="panel">
+          <h3>Top Opportunities</h3>
+          <div class="grid-3">
+            {% for row in top5 %}
+            <div class="card">
+              <b>{{ row['Stock'] }}</b>
+              <div class="small">{{ row['Symbol'] }} • {{ row['Sector'] }}</div>
+
+              <div style="margin-top:6px;">
+                <div>Score: <span class="score">{{ row['Score'] }}</span></div>
+              </div>
+
+              <div class="small" style="margin-top:4px;">
+                <b>Delv x:</b> {{ '%.2f'|format(row['Delv x']) }} •
+                <b>Trade x:</b> {{ '%.2f'|format(row['Trade x']) }}
+              </div>
+
+              <div style="margin-top:8px;">
+                <span class="pill {% if row['Recommendation']=='Strong Buy' %}sb{% elif row['Recommendation']=='Accumulate' %}acc{% elif row['Recommendation']=='Watch' %}watch{% else %}avoid{% endif %}">
+                  {{ row['Recommendation'] }}
+                </span>
+                <span class="pill signal">{{ row['Signal'] }}</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Pre-Breakout Opportunities</h3>
+          <div class="grid-3">
+            {% for row in prebreakout %}
+            <div class="card">
+              <b>{{ row['Stock'] }}</b>
+              <div class="small">{{ row['Symbol'] }} • {{ row['Sector'] }}</div>
+
+              <div style="margin-top:6px;">
+                <div>Score: <span class="score">{{ row['Score'] }}</span></div>
+              </div>
+
+              <div class="small" style="margin-top:4px;">
+                <b>Delv x:</b> {{ '%.2f'|format(row['Delv x']) }} •
+                <b>Trade x:</b> {{ '%.2f'|format(row['Trade x']) }}
+              </div>
+
+              <div class="small" style="margin-top:6px;">
+                <b>Pre-breakout action:</b> {{ row['Action'] }}
+              </div>
+
+              <div style="margin-top:8px;">
+                <span class="pill {% if row['Recommendation']=='Strong Buy' %}sb{% elif row['Recommendation']=='Accumulate' %}acc{% elif row['Recommendation']=='Watch' %}watch{% else %}avoid{% endif %}">
+                  {{ row['Recommendation'] }}
+                </span>
+                <span class="pill signal">{{ row['Signal'] }}</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: Signal rules -->
+      <div>
+        <div class="panel">
+          <h3>Signal rules</h3>
+
+          <!-- 1. Global scoring engine -->
+          <p style="margin:0 0 4px 0;font-weight:600;">1. Global scoring</p>
+          <p style="margin:0 0 4px 0;font-size:14px;color:#4b5563;">
+            Each symbol gets a composite score from delivery, trade, price change, repeat days and trend:
+          </p>
+          <ul style="margin:4px 0 8px 18px;padding:0;font-size:14px;color:#4b5563;">
+            <li>Delivery vs Trade ratio: <code>ratio = Delv x / (Trade x + 0.1)</code></li>
+            <li>Delivery spike bonus when <code>Delv x &gt; 1.3 × avg Delv x</code>, else a smaller bonus if <code>Delv x &gt; avg Delv x</code></li>
+            <li>Trade spike bonus when <code>Trade x &gt; 1.5 × avg Trade x</code></li>
+            <li>Price change bonus / penalty from <code>Chg%</code> (strongly positive, mildly positive, or &lt; −3%)</li>
+            <li>Repeat‑days bonus when the symbol appears on 2+ distinct dates (extra weight for 3–4+ days)</li>
+            <li>Trend bonus when delivery shows a rising pattern across files</li>
+          </ul>
+          <p style="margin:0 0 8px 0;font-size:14px;color:#4b5563;">
+            Recommendations are mapped from the final score:
+            <code>Strong Buy</code> ≥ 85,
+            <code>Accumulate</code> ≥ 65,
+            <code>Watch</code> ≥ 45,
+            otherwise <code>Avoid</code>.
+          </p>
+
+          <!-- 2. Top Opportunities rules -->
+          <p style="margin:0 0 4px 0;font-weight:600;">2. Top Opportunities</p>
+          <p style="margin:0 0 8px 0;font-size:14px;color:#4b5563;">
+            Shows the strongest current ideas: filter to
+            <code>Strong Buy</code> and <code>Accumulate</code> names,
+            then display the top few by score. These are the highest‑conviction
+            accumulation candidates right now.
+          </p>
+
+          <!-- 3. Pre‑Breakout Opportunities rules -->
+          <p style="margin:0 0 4px 0;font-weight:600;">3. Pre‑Breakout Opportunities</p>
+          <p style="margin:0 0 4px 0;font-size:14px;color:#4b5563;">
+            Focuses on early setups that are close to moving:
+          </p>
+          <ul style="margin:4px 0 8px 18px;padding:0;font-size:14px;color:#4b5563;">
+            <li>Filter to stocks with <code>Watch</code> recommendation or
+                <code>Breakout candidate</code> signal</li>
+            <li>Exclude symbols already in Top Opportunities to avoid duplication</li>
+            <li>From the remainder, show the top few by score with their
+                pre‑breakout action</li>
+          </ul>
+          <p style="margin:0;font-size:14px;color:#4b5563;">
+            This gives a watchlist of constructive names that may become future
+            Top Opportunities if follow‑through improves.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="filters">
+        <input id="search" placeholder="Search stock..." />
+        <select id="rec">
+          <option value="">All</option>
+          <option>Strong Buy</option>
+          <option>Accumulate</option>
+          <option>Watch</option>
+          <option>Avoid</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Single unified table with extended columns and stacked symbol -->
+    <div class="panel">
+      <h3>Full Recommendation Table</h3>
+      <div class="table-wrap">
+        <table id="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Symbol / Name</th>
+              <th>Sector</th>
+              <th>Signal</th>
+              <th>Delv (x)</th>
+              <th>Trade (x)</th>
+              <th>Delivery ratio</th>
+              <th>Chg%</th>
+              <th>Appearances</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in records %}
+            <tr>
+              <!-- Date without time (backend provides YYYY-MM-DD) -->
+              <td>{{ row['Date'] }}</td>
+
+              <!-- Symbol + company name stacked -->
+              <td class="symbol-cell">
+                <div class="symbol-code">{{ row['Symbol'] }}</div>
+                <div class="symbol-name">{{ row['Stock'] }}</div>
+              </td>
+
+              <!-- Sector -->
+              <td>{{ row['Sector'] }}</td>
+
+              <!-- Signal highlighted based on recommendation strength -->
+              <td>
+                <span class="pill
+                  {% if row['Recommendation'] == 'Strong Buy' %}
+                    sb
+                  {% elif row['Recommendation'] == 'Accumulate' %}
+                    acc
+                  {% elif row['Recommendation'] == 'Watch' %}
+                    watch
+                  {% else %}
+                    avoid
+                  {% endif %}">
+                  {{ row['Signal'] }}
+                </span>
+              </td>
+
+              <!-- x-multiples -->
+              <td class="num">{{ '%.2f'|format(row['Delv x']) }}</td>
+              <td class="num">{{ '%.2f'|format(row['Trade x']) }}</td>
+
+              <!-- delivery ratio -->
+              <td class="num">{{ row['Delivery ratio'] }}</td>
+
+              <!-- price change -->
+              <td class="num">{{ row['Chg %'] }}</td>
+
+              <!-- appearances (repeat count) -->
+              <td class="num">{{ row['Appearances'] }}</td>
+
+              <!-- score, same style as elsewhere -->
+              <td class="num"><span class="score">{{ row['Score'] }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('search').onkeyup = function(){
+      let v = this.value.toLowerCase();
+      document.querySelectorAll('#table tbody tr').forEach(r =>
+        r.style.display = r.innerText.toLowerCase().includes(v) ? '' : 'none'
+      );
+    };
+    document.getElementById('rec').onchange = function(){
+      let v = this.value;
+      document.querySelectorAll('#table tbody tr').forEach(r =>
+        r.style.display = (!v || r.innerText.includes(v)) ? '' : 'none'
+      );
+    };
+  </script>
+</body>
+</html>

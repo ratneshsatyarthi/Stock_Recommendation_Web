@@ -1,0 +1,186 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Stock Recommendation System</title>
+
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {font-family:'Satoshi',sans-serif;background:#f8fafc;margin:0;}
+    .shell {padding:20px;max-width:1300px;margin:auto;}
+
+    .panel {
+      background:#fff;
+      border-radius:12px;
+      padding:15px;
+      margin-bottom:20px;
+      box-shadow:0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    .grid-2 {display:grid;grid-template-columns:1fr 1fr;gap:15px;}
+
+    .pill {
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:12px;
+    }
+
+    .num {text-align:right;}
+
+    .highlight {background:#f0fbf5;}
+
+    table {width:100%;border-collapse:collapse;}
+    th, td {padding:10px;border-bottom:1px solid #eee;}
+
+    th {position:sticky;top:0;background:#fff;}
+
+    .table-scroll {
+      max-height:400px;
+      overflow-y:auto;
+      border-radius:10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="shell">
+
+<!-- HEADER -->
+<div class="panel">
+  <h1>📊 AI Stock Recommendation System</h1>
+  <p style="color:#6b7280;">
+    Multi-factor analysis using delivery, volume, momentum & institutional patterns
+  </p>
+</div>
+
+<!-- OVERVIEW -->
+<div class="panel">
+  <h3>📘 System Overview</h3>
+  <p style="color:#6b7280;">
+    This system identifies high-probability stock opportunities by analyzing delivery,
+    traded volume, price momentum, and multi-day repeat patterns. It helps detect
+    institutional accumulation, breakout setups, and distribution risks.
+  </p>
+</div>
+
+<!-- RULES -->
+<div class="grid-2">
+
+<div class="panel">
+  <h3>Rule adaptation</h3>
+  <ul style="color:#6b7280;">
+    <li>Breakouts need confirmation</li>
+    <li>Quiet accumulation prioritized</li>
+    <li>Repeated appearance increases confidence</li>
+  </ul>
+</div>
+
+<div class="panel">
+  <h3>Recommendation logic</h3>
+  <ul style="color:#6b7280;">
+    <li><b>Strong Buy:</b> High delivery + repeat + momentum</li>
+    <li><b>Accumulate:</b> Good setup</li>
+    <li><b>Watch:</b> Needs confirmation</li>
+    <li><b>Avoid:</b> Weak signals</li>
+  </ul>
+</div>
+
+</div>
+
+<!-- STATS -->
+<div class="panel">
+  Rows: {{ summary.rows }} |
+  Avg Score: {{ summary.avg_score }} |
+  Strong Buy: {{ summary.strong_buys }} |
+  Watchlist: {{ summary.watchlist }}
+</div>
+
+<!-- FILTERS -->
+<div class="panel">
+  <input type="text" id="search" placeholder="Search stock...">
+  <select id="filter">
+    <option value="">All</option>
+    <option>Strong Buy</option>
+    <option>Accumulate</option>
+    <option>Watch</option>
+    <option>Avoid</option>
+  </select>
+</div>
+
+<!-- TABLE -->
+<div class="panel">
+  <h3>Stock Recommendations</h3>
+
+  <div class="table-scroll">
+    <table id="table">
+      <thead>
+        <tr>
+          <th>Stock</th>
+          <th>Score</th>
+          <th>Rec</th>
+          <th>Delv</th>
+          <th>Trade</th>
+          <th>Chg%</th>
+          <th>Signal</th>
+          <th>Repeat</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for row in records %}
+        <tr class="{% if row['Recommendation']=='Strong Buy' %}highlight{% endif %}">
+          <td>{{ row['Stock'] or '-' }}</td>
+          <td class="num">{{ row['Score'] }}</td>
+
+          <td>
+            <span class="pill" style="background: {{ row['Rec Color'] }}">
+              {{ row['Recommendation'] }}
+            </span>
+          </td>
+
+          <td class="num">{{ row['Delv x'] }}</td>
+          <td class="num">{{ row['Trade x'] }}</td>
+          <td class="num">{{ row['Chg %'] }}</td>
+
+          <td>
+            <span class="pill" style="background: {{ row['Signal Color'] }}">
+              {{ row['Signal'] }}
+            </span>
+          </td>
+
+          <td class="num">{{ row['Repeat Count'] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+
+    </table>
+  </div>
+</div>
+
+</div>
+
+<script>
+// SEARCH
+document.getElementById("search").addEventListener("keyup", function(){
+let val = this.value.toLowerCase();
+document.querySelectorAll("#table tbody tr").forEach(r=>{
+r.style.display = r.innerText.toLowerCase().includes(val) ? "" : "none";
+});
+});
+
+// FILTER
+document.getElementById("filter").addEventListener("change", function(){
+let val = this.value;
+document.querySelectorAll("#table tbody tr").forEach(r=>{
+r.style.display = (!val || r.innerText.includes(val)) ? "" : "none";
+});
+});
+</script>
+
+</body>
+</html>

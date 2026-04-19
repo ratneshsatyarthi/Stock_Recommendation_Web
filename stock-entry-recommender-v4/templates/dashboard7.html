@@ -1,0 +1,316 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Stock Recommendation System</title>
+
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet">
+
+<style>
+
+/* 🌿 BASE */
+body {
+  font-family:'Satoshi',sans-serif;
+  background:#f3f6fb;
+  margin:0;
+  color:#1e293b;
+}
+.shell {max-width:1400px;margin:auto;padding:20px;}
+
+/* 🎯 HEADER */
+.header {
+  text-align:center;
+  padding:30px 20px;
+  border-radius:16px;
+  background:linear-gradient(135deg,#e0f2fe,#ede9fe);
+  margin-bottom:20px;
+}
+.header h1 {margin:0;font-size:28px;}
+.header p {color:#475569;margin-top:6px;}
+
+/* 📊 KPI */
+.kpi {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:14px;
+}
+.kpi div {
+  background:rgba(255,255,255,0.7);
+  backdrop-filter:blur(6px);
+  padding:16px;
+  border-radius:14px;
+  text-align:center;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* 📂 UPLOAD CARD */
+.upload-card {
+  background:rgba(255,255,255,0.7);
+  backdrop-filter:blur(6px);
+  padding:16px;
+  border-radius:14px;
+  text-align:center;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+}
+
+.upload-card input {
+  width:100%;
+  margin-top:8px;
+  font-size:12px;
+}
+
+.upload-card button {
+  width:100%;
+  margin-top:6px;
+  padding:6px;
+  font-size:12px;
+  border-radius:8px;
+  border:none;
+  cursor:pointer;
+}
+
+/* PANELS */
+.panel {
+  padding:16px;
+  border-radius:16px;
+  margin-top:16px;
+  box-shadow:0 6px 16px rgba(0,0,0,0.05);
+}
+
+.top-section {background:#ecfdf5;}
+.breakout-section {background:#eff6ff;}
+.filter-section {background:#f8fafc;}
+.table-section {background:white;}
+
+/* GRID */
+.grid-3 {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:14px;
+}
+
+/* CARD */
+.card {
+  background:white;
+  padding:14px;
+  border-radius:14px;
+  border:1px solid #e2e8f0;
+  transition:0.2s;
+}
+.card:hover {
+  transform:translateY(-4px);
+  box-shadow:0 10px 20px rgba(0,0,0,0.08);
+}
+
+/* PILLS */
+.pill {
+  display:inline-block;
+  margin-top:6px;
+  padding:5px 10px;
+  border-radius:999px;
+  font-size:12px;
+}
+
+.sb {background:#d1fae5;color:#065f46;}
+.acc {background:#e0f2fe;color:#075985;}
+.watch {background:#fef3c7;color:#92400e;}
+.avoid {background:#fee2e2;color:#7f1d1d;}
+.signal {background:#e0e7ff;color:#3730a3;}
+
+.heat-high {color:#16a34a;font-weight:600;}
+.heat-low {color:#dc2626;font-weight:600;}
+
+.small {font-size:12px;color:#64748b;}
+
+/* FILTER */
+.filters {display:flex;flex-wrap:wrap;gap:10px;}
+.filters input,.filters select {
+  flex:1;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #e2e8f0;
+}
+
+/* TABLE */
+.table-wrap {max-height:420px;overflow-y:auto;}
+table {width:100%;border-collapse:collapse;}
+th {position:sticky;top:0;background:#f1f5f9;}
+th,td {padding:10px;border-bottom:1px solid #e2e8f0;}
+td.num {text-align:right;}
+
+</style>
+</head>
+
+<body>
+
+<div class="shell">
+
+<!-- HEADER -->
+<div class="header">
+<h1>📊 Stock Recommendation System</h1>
+<p>Identify pre-breakout opportunities using delivery, momentum & institutional patterns</p>
+</div>
+
+<!-- KPI + UPLOAD -->
+<div class="kpi">
+
+<div>
+<b>{{ summary.rows }}</b><br>Total Stocks
+</div>
+
+<div>
+<b>{{ summary.avg_score }}</b><br>Avg Score
+</div>
+
+<div>
+<b>{{ summary.strong_buys }}</b><br>Strong Buy
+</div>
+
+<div>
+<b>{{ summary.watchlist }}</b><br>Watchlist
+</div>
+
+<!-- 📂 UPLOAD -->
+<div class="upload-card">
+
+<b>📂 Upload</b>
+
+<form action="/upload" method="POST" enctype="multipart/form-data">
+<input type="file" name="files" multiple required>
+
+<button style="background:#16a34a;color:white;">
+Upload
+</button>
+</form>
+
+<form action="/clear-uploads" method="POST">
+<button style="background:#dc2626;color:white;">
+Clear
+</button>
+</form>
+
+</div>
+
+</div>
+
+<!-- TOP -->
+<div class="panel top-section">
+<h3>🔥 Top Opportunities</h3>
+<div class="grid-3">
+{% for row in top5 %}
+<div class="card">
+<b>{{ row['Stock'] }}</b>
+<div class="small">{{ row['Symbol'] }} | {{ row['Sector'] }}</div>
+<div>Score: <span class="heat-high">{{ row['Score'] }}</span></div>
+<div class="small">Repeat: {{ row['Repeat Count'] }}</div>
+<div class="pill sb">{{ row['Recommendation'] }}</div>
+<div class="pill signal">{{ row['Signal'] }}</div>
+</div>
+{% endfor %}
+</div>
+</div>
+
+<!-- BREAKOUT -->
+<div class="panel breakout-section">
+<h3>🚀 Pre-Breakout Opportunities</h3>
+<div class="grid-3">
+{% for row in top5 %}
+<div class="card">
+<b>{{ row['Stock'] }}</b>
+<div class="small">{{ row['Symbol'] }} | {{ row['Sector'] }}</div>
+<div>Score: <b class="heat-high">{{ row['Score'] }}</b></div>
+<div class="pill signal">{{ row['Signal'] }}</div>
+<div class="small"><b>Action:</b> {{ row['Action'] }}</div>
+</div>
+{% endfor %}
+</div>
+</div>
+
+<!-- FILTER -->
+<div class="panel filter-section">
+<div class="filters">
+<input id="search" placeholder="Search stock...">
+<select id="rec">
+<option value="">All</option>
+<option>Strong Buy</option>
+<option>Accumulate</option>
+<option>Watch</option>
+<option>Avoid</option>
+</select>
+</div>
+</div>
+
+<!-- TABLE -->
+<div class="panel table-section">
+<h3>📋 Full Recommendation Table</h3>
+
+<div class="table-wrap">
+<table id="table">
+<thead>
+<tr>
+<th>Stock</th>
+<th>Score</th>
+<th>Rec</th>
+<th>Delv (x)</th>
+<th>Trade (x)</th>
+<th>Chg%</th>
+<th>Signal</th>
+<th>Repeat</th>
+</tr>
+</thead>
+
+<tbody>
+{% for row in records %}
+<tr>
+<td>{{ row['Stock'] }}</td>
+<td class="num">{{ row['Score'] }}</td>
+
+<td>
+<span class="pill
+{% if row['Recommendation']=='Strong Buy' %}sb
+{% elif row['Recommendation']=='Accumulate' %}acc
+{% elif row['Recommendation']=='Watch' %}watch
+{% else %}avoid{% endif %}">
+{{ row['Recommendation'] }}
+</span>
+</td>
+
+<td class="num">{{ "%.2f"|format(row['Delv x']) }}</td>
+<td class="num">{{ "%.2f"|format(row['Trade x']) }}</td>
+<td class="num">{{ row['Chg %'] }}</td>
+
+<td><span class="pill signal">{{ row['Signal'] }}</span></td>
+<td class="num">{{ row['Repeat Count'] }}</td>
+
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+</div>
+
+</div>
+
+<script>
+document.getElementById("search").onkeyup = function(){
+let v=this.value.toLowerCase();
+document.querySelectorAll("#table tbody tr").forEach(r=>{
+r.style.display=r.innerText.toLowerCase().includes(v)?"":"none";
+});
+};
+
+document.getElementById("rec").onchange = function(){
+let v=this.value;
+document.querySelectorAll("#table tbody tr").forEach(r=>{
+r.style.display=(v==""||r.innerText.includes(v))?"":"none";
+});
+};
+</script>
+
+</body>
+</html>
+

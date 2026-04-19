@@ -1,0 +1,236 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Pro Trader Dashboard</title>
+
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet">
+
+<style>
+body {font-family:'Satoshi',sans-serif;background:#0f172a;color:#e2e8f0;margin:0;}
+.shell {max-width:1400px;margin:auto;padding:20px;}
+
+/* HEADER */
+h1 {margin-bottom:10px}
+
+/* KPI */
+.kpi {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+.kpi div {
+  background:#1e293b;
+  padding:15px;
+  border-radius:10px;
+  text-align:center;
+}
+
+/* PANELS */
+.panel {
+  background:#1e293b;
+  padding:15px;
+  border-radius:12px;
+  margin-top:15px;
+}
+
+/* GRID */
+.grid-2 {display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid-3 {display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+
+/* FILTER */
+.filters {display:flex;gap:10px;margin-bottom:10px;}
+.filters input,.filters select {
+  padding:8px;
+  border-radius:8px;
+  border:none;
+}
+
+/* TABLE */
+.table-wrap {
+  max-height:400px;
+  overflow-y:auto;
+}
+
+table {width:100%;border-collapse:collapse;}
+th {
+  position:sticky;
+  top:0;
+  background:#1e293b;
+}
+th,td {padding:10px;border-bottom:1px solid #334155;}
+
+td.num {text-align:right;}
+
+/* COLORS */
+.sb {background:#065f46;color:#a7f3d0;}
+.acc {background:#164e63;color:#7dd3fc;}
+.watch {background:#78350f;color:#fde68a;}
+.avoid {background:#7f1d1d;color:#fecaca;}
+
+.pill {
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
+}
+
+/* SIGNAL */
+.signal {background:#1d4ed8;color:#bfdbfe;}
+
+/* TOP PICKS */
+.card {
+  background:#1e293b;
+  padding:12px;
+  border-radius:10px;
+}
+
+/* HEAT */
+.heat-high {color:#22c55e;}
+.heat-mid {color:#eab308;}
+.heat-low {color:#ef4444;}
+
+</style>
+</head>
+
+<body>
+<div class="shell">
+
+<h1>🚀 Pro Trader Dashboard</h1>
+
+<!-- KPI -->
+<div class="kpi">
+<div>Rows<br><b>{{ summary.rows }}</b></div>
+<div>Avg Score<br><b>{{ summary.avg_score }}</b></div>
+<div>Strong Buy<br><b>{{ summary.strong_buys }}</b></div>
+<div>Watchlist<br><b>{{ summary.watchlist }}</b></div>
+</div>
+
+<!-- TOP OPPORTUNITIES -->
+<div class="panel">
+<h3>🔥 Top Opportunities</h3>
+<div class="grid-3">
+{% for row in top5 %}
+<div class="card">
+<b>{{ row['Stock'] }}</b><br>
+
+Score: <span class="heat-high">{{ row['Score'] }}</span><br>
+Repeat: {{ row['Repeat Count'] }}<br>
+
+<div class="pill sb">{{ row['Recommendation'] }}</div>
+<div class="pill signal">{{ row['Signal'] }}</div>
+
+{% if row['Chg %'] > 0 %}
+<span class="heat-high">↑ Momentum</span>
+{% else %}
+<span class="heat-low">↓ Weak</span>
+{% endif %}
+
+</div>
+{% endfor %}
+</div>
+</div>
+
+<!-- RULES -->
+<div class="grid-2">
+<div class="panel">
+<h3>📘 Strategy Rules</h3>
+<ul>
+<li>High delivery + repeat = accumulation</li>
+<li>Delivery > Trade = smart money</li>
+<li>Positive change = momentum confirmation</li>
+<li>Repeated signals = institutional interest</li>
+</ul>
+</div>
+
+<div class="panel">
+<h3>📊 Decision Ladder</h3>
+<ul>
+<li><b>Strong Buy:</b> Immediate action</li>
+<li><b>Accumulate:</b> Build position</li>
+<li><b>Watch:</b> Wait for breakout</li>
+<li><b>Avoid:</b> Ignore</li>
+</ul>
+</div>
+</div>
+
+<!-- FILTER -->
+<div class="panel">
+<div class="filters">
+<input id="search" placeholder="Search stock...">
+<select id="rec">
+<option value="">All</option>
+<option>Strong Buy</option>
+<option>Accumulate</option>
+<option>Watch</option>
+<option>Avoid</option>
+</select>
+</div>
+</div>
+
+<!-- TABLE -->
+<div class="panel">
+<h3>📋 Live Market Table</h3>
+
+<div class="table-wrap">
+<table id="table">
+<thead>
+<tr>
+<th>Stock</th><th>Score</th><th>Rec</th>
+<th>Delv</th><th>Trade</th><th>Chg%</th><th>Signal</th>
+</tr>
+</thead>
+
+<tbody>
+{% for row in records %}
+<tr>
+<td>{{ row['Stock'] }}</td>
+<td class="num">{{ row['Score'] }}</td>
+
+<td>
+<span class="pill
+{% if row['Recommendation']=='Strong Buy' %}sb
+{% elif row['Recommendation']=='Accumulate' %}acc
+{% elif row['Recommendation']=='Watch' %}watch
+{% else %}avoid{% endif %}">
+{{ row['Recommendation'] }}
+</span>
+</td>
+
+<td class="num">{{ row['Delv x'] }}</td>
+<td class="num">{{ row['Trade x'] }}</td>
+<td class="num">{{ row['Chg %'] }}</td>
+
+<td><span class="pill signal">{{ row['Signal'] }}</span></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+</div>
+
+</div>
+
+<script>
+// SEARCH
+document.getElementById("search").onkeyup = function(){
+let v=this.value.toLowerCase();
+document.querySelectorAll("#table tbody tr").forEach(r=>{
+r.style.display=r.innerText.toLowerCase().includes(v)?"":"none";
+});
+};
+
+// FILTER
+document.getElementById("rec").onchange = function(){
+let v=this.value;
+document.querySelectorAll("#table tbody tr").forEach(r=>{
+r.style.display=(v==""||r.innerText.includes(v))?"":"none";
+});
+};
+</script>
+
+</body>
+</html>

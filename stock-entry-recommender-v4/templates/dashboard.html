@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <!-- Basic document metadata -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stock Recommendation System</title>
+
+  <!-- Font: Satoshi (used along with system UI fonts) -->
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* =========================================================
+       1. THEME TOKENS (CSS custom properties)
+       - Default: dark theme
+       - Overridden when html[data-theme="light"] is set
+       - If you add new components, derive colors from these
+         tokens instead of hard-coding colors.
+       ======================================================= */
+    :root{
+      /* DARK THEME (default) */
+      --bg-body:#020617;
+      --bg-panel:#020617;
+      --bg-panel-soft:#020617;
+      --border-soft:#1f2937;
+      --accent:#22c55e;
+      --accent-soft:rgba(34,197,94,0.12);
+      --text-main:#e5e7eb;
+      --text-muted:#9ca3af;
+
+      /* Pill / chip variants for different recommendations */
+      --chip-strong-bg:rgba(22,163,74,0.15);
+      --chip-strong-border:rgba(34,197,94,0.6);
+      --chip-strong-text:#bbf7d0;
+
+      --chip-acc-bg:rgba(59,130,246,0.17);
+      --chip-acc-border:rgba(59,130,246,0.7);
+      --chip-acc-text:#dbeafe;
+
+      --chip-watch-bg:rgba(245,158,11,0.14);
+      --chip-watch-border:rgba(245,158,11,0.7);
+      --chip-watch-text:#fef3c7;
+
+      --chip-avoid-bg:rgba(248,113,113,0.14);
+      --chip-avoid-border:rgba(239,68,68,0.7);
+      --chip-avoid-text:#fee2e2;
+
+      /* Header gradient + text colors for dark theme */
+      --header-bg:linear-gradient(135deg,rgba(15,23,42,0.96),rgba(6,95,70,0.85));
+      --header-border:rgba(148,163,184,0.4);
+      --header-text-main:#e5e7eb;
+      --header-text-sub:rgba(226,232,240,0.8);
+    }
+
+    /* =========================================================
+       2. LIGHT THEME TOKEN OVERRIDES
+       - Applied when <html data-theme="light"> via JS.
+       - To tweak colors for light theme, adjust these only.
+       ======================================================= */
+    html[data-theme="light"]{
+      --bg-body:#f4f8fb;
+      --bg-panel:#ffffff;
+      --bg-panel-soft:#ffffff;
+      --border-soft:#dde4f0;
+      --accent:#0ea5e9;
+      --accent-soft:rgba(14,165,233,0.09);
+      --text-main:#0f172a;
+      --text-muted:#64748b;
+
+      --chip-strong-bg:#e0fbf5;
+      --chip-strong-border:#9de5ce;
+      --chip-strong-text:#047857;
+
+      --chip-acc-bg:#e3f2ff;
+      --chip-acc-border:#b9ddff;
+      --chip-acc-text:#1d4ed8;
+
+      --chip-watch-bg:#fff5e6;
+      --chip-watch-border:#ffd8a8;
+      --chip-watch-text:#b45309;
+
+      --chip-avoid-bg:#ffecef;
+      --chip-avoid-border:#ffc2cc;
+      --chip-avoid-text:#b91c1c;
+
+      /* Brighter teal-blue header for light mode */
+      --header-bg:linear-gradient(135deg,#0ea5e9,#38bdf8);
+      --header-border:rgba(56,189,248,0.45);
+      --header-text-main:#f9fafb;
+      --header-text-sub:#e0f2fe;
+    }
+
+    /* =========================================================
+       3. GLOBAL BODY + LAYOUT SHELL
+       - Shell acts as the main page container
+       ======================================================= */
+    body{
+      font-family:'Inter','Satoshi',system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      /* Dark radial background with vignette effect */
+      background:
+        radial-gradient(circle at top,#111827 0,var(--bg-body) 52%,#020617 100%);
+      margin:0;
+      color:var(--text-main);
+    }
+
+    /* Alternate background for light theme body */
+    html[data-theme="light"] body{
+      background:
+        radial-gradient(circle at top,#dbeafe 0,#f4f8fb 40%,#eef4fb 70%);
+    }
+
+    .shell{
+      /* Global content max width and padding */
+      max-width:1400px;
+      margin:auto;
+      padding:24px 20px 32px;
+    }
+
+    /* =========================================================
+       4. HEADER AREA (TITLE + META + THEME TOGGLE)
+       ======================================================= */
+    .header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:24px;
+      padding:20px 20px 18px;
+      border-radius:18px;
+      background:var(--header-bg);
+      border:1px solid var(--header-border);
+      box-shadow:0 18px 45px rgba(15,23,42,0.65);
+      margin-bottom:20px;
+    }
+    html[data-theme="light"] .header{
+      /* Softer shadow in light theme */
+      box-shadow:0 18px 40px rgba(15,23,42,0.16);
+    }
+
+    .header-main{
+      /* Left side width constraint on larger screens */
+      max-width:70%;
+    }
+
+    .header h1{
+      margin:0 0 6px 0;
+      font-size:26px;
+      font-weight:650;
+      letter-spacing:0.02em;
+      color:var(--header-text-main);
+    }
+
+    .header p{
+      color:var(--header-text-sub);
+      margin:0;
+      font-size:14px;
+    }
+
+    /* Small badge/tagline under main title */
+    .header-tagline{
+      margin-top:8px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 10px;
+      border-radius:999px;
+      background:rgba(15,23,42,0.65);
+      border:1px solid rgba(148,163,184,0.65);
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:0.09em;
+      color:#e5e7eb;
+    }
+    html[data-theme="light"] .header-tagline{
+      background:rgba(15,23,42,0.85);
+      border-color:rgba(15,23,42,0.7);
+    }
+
+    .header-tagline-dot{
+      /* Pulsing/active green dot in header tagline */
+      width:7px;
+      height:7px;
+      border-radius:999px;
+      background:var(--accent);
+      box-shadow:0 0 0 4px rgba(56,189,248,0.35);
+    }
+
+    .header-meta{
+      /* Right-side meta text (scan description + toggle) */
+      text-align:right;
+      font-size:11px;
+      color:var(--text-muted);
+    }
+    .header-meta b{
+      display:block;
+      font-size:13px;
+      color:var(--header-text-main);
+    }
+    html[data-theme="light"] .header-meta{
+      color:#e0f2fe;
+    }
+    html[data-theme="light"] .header-meta b{
+      color:#ffffff;
+    }
+
+    .theme-toggle-wrap{
+      margin-top:10px;
+    }
+
+    /* Theme toggle button styling
+       - Label updated via JS (Light mode / Dark mode)
+       - If you add icons, adjust padding here */
+    #theme-toggle{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border-soft);
+      background:var(--bg-panel);
+      color:var(--text-main);
+      font-size:11px;
+      font-weight:500;
+      cursor:pointer;
+    }
+    #theme-toggle:hover{
+      background:var(--accent-soft);
+      border-color:var(--accent);
+    }
+
+    /* =========================================================
+       5. KPI SUMMARY ROW + UPLOAD CARD
+       - KPI cards + upload area sit in the same grid.
+       ======================================================= */
+    .kpi{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+      gap:14px;
+      margin-bottom:4px;
+      align-items:stretch;
+    }
+
+    .kpi-card{
+      position:relative;
+      background:var(--bg-panel);
+      border:1px solid var(--border-soft);
+      padding:18px 16px 18px;
+      border-radius:16px;
+      text-align:center;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    html[data-theme="light"] .kpi-card{
+      box-shadow:0 10px 30px rgba(15,23,42,0.06);
+    }
+
+    /* Colored left strip indicating card type
+       - nth-of-type used to give each KPI a unique gradient
+       - If the order of KPI cards changes, re-check these */
+    .kpi-card::before{
+      content:"";
+      position:absolute;
+      left:0;
+      top:0;
+      bottom:0;
+      width:4px;
+      border-radius:16px 0 0 16px;
+      background:linear-gradient(to bottom,#f97373,#fecaca);
+    }
+    .kpi-card:nth-of-type(1)::before{
+      background:linear-gradient(to bottom,#f97373,#fecaca);
+    }
+    .kpi-card:nth-of-type(2)::before{
+      background:linear-gradient(to bottom,#0ea5e9,#bae6fd);
+    }
+    .kpi-card:nth-of-type(3)::before{
+      background:linear-gradient(to bottom,#22c55e,#bbf7d0);
+    }
+    .kpi-card:nth-of-type(4)::before{
+      background:linear-gradient(to bottom,#f97316,#fed7aa);
+    }
+
+    .kpi-label{
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:0.08em;
+      color:var(--text-muted);
+      margin-bottom:6px;
+    }
+    .kpi-card b{
+      font-size:26px;
+      font-weight:700;
+      display:block;
+    }
+    /* Per-KPI accent colors for values */
+    .kpi-card:nth-of-type(1) b{color:#f97373;}
+    .kpi-card:nth-of-type(2) b{color:var(--text-main);}
+    .kpi-card:nth-of-type(3) b{color:#22c55e;}
+    .kpi-card:nth-of-type(4) b{color:#f97316;}
+
+    /* Base upload card (shares row with KPI cards) */
+    .upload-card{
+      background:rgba(250,250,250,0.04);  /* subtle in dark mode */
+      border:1px dashed rgba(250,204,21,0.65);
+      border-radius:16px;
+      padding:14px 16px 12px;
+    }
+
+    /* Lighter, pastel upload styling in light mode */
+    html[data-theme="light"] .upload-card{
+      background:#fffdf4;                 /* very light warm yellow */
+      border-color:#facc15;
+      box-shadow:0 12px 28px rgba(148,163,184,0.25);
+    }
+    .upload-card b{
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:0.09em;
+    }
+    .upload-card input{
+      width:100%;
+      margin-top:8px;
+      font-size:12px;
+    }
+    .upload-card button{
+      width:100%;
+      margin-top:6px;
+      padding:7px 0;
+      border-radius:8px;
+      border:none;
+      cursor:pointer;
+      font-size:12px;
+      font-weight:550;
+    }
+
+    /* =========================================================
+       6. GENERIC PANELS + GRID LAYOUT
+       - Reused for multiple sections (Top Opportunities, Rules, etc.)
+       ======================================================= */
+    .panel{
+      background:var(--bg-panel);
+      border:1px solid var(--border-soft);
+      border-radius:12px;
+      padding:14px 16px 14px;
+      margin-top:16px;
+    }
+    html[data-theme="light"] .panel{
+      box-shadow:0 10px 30px rgba(15,23,42,0.05);
+    }
+
+    /* SPECIAL pastel panels:
+       - Top Opportunities: lavender theme
+       - Pre-Breakout: pink theme
+       If you add more themed panels, follow the same pattern. */
+
+    /* Top Opportunities – subtle tint in dark mode */
+    .panel-top-opps{
+      background:radial-gradient(circle at top left,#1f1933 0,#020617 60%,#020617 100%);
+    }
+    /* Top Opportunities – pastel for light theme */
+    html[data-theme="light"] .panel-top-opps{
+      background:radial-gradient(circle at top left,#f2ecff 0,#f7f4ff 45%,#f9f7ff 100%);
+      border-color:#e5ddff;
+    }
+
+    /* Pre-Breakout – subtle pink in dark mode */
+    .panel-prebreakout{
+      background:radial-gradient(circle at top left,#241624 0,#020617 60%,#020617 100%);
+    }
+    /* Pre-Breakout – pastel for light theme */
+    html[data-theme="light"] .panel-prebreakout{
+      background:radial-gradient(circle at top left,#ffe8f1 0,#fff1f7 45%,#fff6fa 100%);
+      border-color:#ffdde8;
+    }
+
+    .panel h3{
+      margin:0 0 8px 0;
+      font-size:15px;
+      font-weight:650;
+      letter-spacing:0.06em;
+      text-transform:uppercase;
+      color:var(--text-muted);
+    }
+
+    /* 3-column auto grid for cards (Top / Pre-breakout) */
+    .grid-3{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+      gap:12px;
+    }
+
+    /* Generic card used for individual stock tiles */
+    .card{
+      background:var(--bg-panel-soft);
+      border:1px solid rgba(55,65,81,0.9);
+      border-radius:10px;
+      padding:12px 12px 10px;
+    }
+    html[data-theme="light"] .card{
+      border-color:var(--border-soft);
+      background:#ffffff;
+    }
+
+    .score{
+      color:#f97373;
+      font-weight:700;
+    }
+
+    /* =========================================================
+       7. PILL / CHIP STYLES
+       - Different classes for recommendation types + signal
+       - Logic in the template picks the correct class.
+       ======================================================= */
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      margin-top:6px;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:550;
+      letter-spacing:0.04em;
+      text-transform:uppercase;
+    }
+    .sb{
+      background:var(--chip-strong-bg);
+      color:var(--chip-strong-text);
+      border:1px solid var(--chip-strong-border);
+    }
+    .acc{
+      background:var(--chip-acc-bg);
+      color:var(--chip-acc-text);
+      border:1px solid var(--chip-acc-border);
+    }
+    .watch{
+      background:var(--chip-watch-bg);
+      color:var(--chip-watch-text);
+      border:1px solid var(--chip-watch-border);
+    }
+    .avoid{
+      background:var(--chip-avoid-bg);
+      color:var(--chip-avoid-text);
+      border:1px solid var(--chip-avoid-border);
+    }
+    /* Neutral pill used to display raw Signal label */
+    .signal{
+      background:rgba(148,163,184,0.16);
+      color:var(--text-main);
+      border:1px solid rgba(148,163,184,0.45);
+    }
+
+    .small{
+      font-size:11px;
+      color:var(--text-muted);
+    }
+
+    /* =========================================================
+       8. LAYOUT: TOP OPPORTUNITIES + SIGNAL RULES (2‑column)
+       ======================================================= */
+    .row-2col{
+      display:grid;
+      grid-template-columns:1.9fr 1.4fr;
+      gap:14px;
+      align-items:flex-start;
+      margin-top:6px;
+    }
+
+    /* Right-side rules panel overrides (lighter padding etc.) */
+    .rules-panel{
+      padding:12px 14px 10px;
+    }
+    .rules-section-title{
+      margin:0 0 4px 0;
+      font-weight:600;
+      font-size:18px;
+      letter-spacing:0.06em;
+      text-transform:uppercase;
+      color:var(--text-main);
+    }
+    .rules-kicker{
+      margin:0 0 4px 0;
+      font-size:13px;
+      color:var(--text-muted);
+    }
+    .rules-list{
+      margin:4px 0 6px 18px;
+      padding:0;
+      font-size:13px;
+      color:var(--text-muted);
+    }
+    .rules-list li{
+      margin-bottom:2px;
+    }
+    .rules-note{
+      margin:0 0 6px 0;
+      font-size:13px;
+      color:var(--text-muted);
+    }
+
+    /* =========================================================
+       9. FULL TABLE STYLING
+       - Scrollable body with sticky header
+       ======================================================= */
+    .symbol-cell{
+      min-width:220px;
+    }
+    .symbol-code{
+      font-weight:650;
+      font-size:13px;
+      margin-bottom:2px;
+    }
+    .symbol-name{
+      font-size:11px;
+      color:var(--text-muted);
+      line-height:1.35;
+    }
+
+    .table-wrap{
+      max-height:420px;
+      overflow-y:auto;
+      border-radius:10px;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:12px;
+    }
+    th{
+      background:var(--bg-panel);
+      position:sticky;
+      top:0;
+      z-index:1;
+      border-bottom:1px solid var(--border-soft);
+      text-align:left;
+      font-size:11px;
+      letter-spacing:0.06em;
+      text-transform:uppercase;
+      color:var(--text-muted);
+    }
+    th,td{
+      padding:8px 8px;
+      border-bottom:1px solid rgba(31,41,55,0.9);
+    }
+    html[data-theme="light"] th,
+    html[data-theme="light"] td{
+      border-bottom-color:var(--border-soft);
+    }
+    td.num{
+      text-align:right;
+    }
+
+    /* =========================================================
+       10. FILTER CONTROLS (search + recommendation dropdown)
+       ======================================================= */
+    .filters{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .filters input,
+    .filters select{
+      flex:1;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--border-soft);
+      background:var(--bg-panel);
+      color:var(--text-main);
+      font-size:12px;
+    }
+
+    /* =========================================================
+       11. RESPONSIVE BEHAVIOUR
+       - Stacks header and 2‑column layout on smaller screens
+       ======================================================= */
+    @media (max-width:1024px){
+      .header{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .header-main{
+        max-width:100%;
+      }
+      .header-meta{
+        text-align:left;
+      }
+      .row-2col{
+        grid-template-columns:1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- =======================================================
+         HEADER
+         - Left: title, description, tagline
+         - Right: scan info + theme toggle
+         - If you add navigation, prefer placing it here.
+         ===================================================== -->
+    <div class="header">
+      <div class="header-main">
+        <h1>Stock Recommendation System</h1>
+        <p>Identify pre-breakout opportunities using delivery, momentum & institutional patterns</p>
+        <div class="header-tagline">
+          <span class="header-tagline-dot"></span>
+          Top opportunities ranked by composite conviction score
+        </div>
+      </div>
+      <div class="header-meta">
+        <b>Live scan</b>
+        NSE delivery + trade signals
+        <div class="theme-toggle-wrap">
+          <!-- Theme toggle label is updated by JS based on current mode -->
+          <button id="theme-toggle" type="button">
+            Light mode
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =======================================================
+         KPI ROW
+         - Four summary metrics + upload card
+         - Values populated via template from 'summary'
+         ===================================================== -->
+    <div class="kpi">
+      <!-- Total rows across all recommendations -->
+      <div class="kpi-card">
+        <div class="kpi-label">Total Stocks</div>
+        <b>{{ summary.rows }}</b>
+      </div>
+
+      <!-- Average composite score -->
+      <div class="kpi-card">
+        <div class="kpi-label">Avg Score</div>
+        <b>{{ summary.avg_score }}</b>
+      </div>
+
+      <!-- Count of Strong Buy recommendations -->
+      <div class="kpi-card">
+        <div class="kpi-label">Strong Buy</div>
+        <b>{{ summary.strong_buys }}</b>
+      </div>
+
+      <!-- Count of Watchlist / Watch recommendations -->
+      <div class="kpi-card">
+        <div class="kpi-label">Watchlist</div>
+        <b>{{ summary.watchlist }}</b>
+      </div>
+
+      <!-- Upload area:
+           - First form: upload multiple files (POST /upload)
+           - Second form: clear uploaded data (POST /clear-uploads)
+           - To change endpoints, update the 'action' URLs. -->
+      <div class="upload-card">
+        <b>Upload</b>
+        <form action="/upload" method="POST" enctype="multipart/form-data">
+          <input type="file" name="files" multiple required />
+          <button style="background:#16a34a;color:white">Upload</button>
+        </form>
+        <form action="/clear-uploads" method="POST">
+          <button style="background:#ef4444;color:white">Clear</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- =======================================================
+         TOP OPPORTUNITIES + SIGNAL RULES (2‑column layout)
+         - Left: top-ranked stocks (Strong Buy / Accumulate)
+         - Right: textual explanation of scoring + signals
+         ===================================================== -->
+    <div class="row-2col">
+      <!-- LEFT COLUMN: Top Opportunities cards -->
+      <div>
+        <div class="panel panel-top-opps">
+          <h3>Top Opportunities</h3>
+
+          <!--
+            'top5' is a server-side list of top-ranked stocks.
+            Each row is a dict with keys:
+            - Stock, Symbol, Sector, Score,
+              Delv x, Trade x, Recommendation, Signal
+            To change the number of cards, adjust the slice that
+            builds 'top5' on the backend.
+          -->
+          <div class="grid-3">
+            {% for row in top5 %}
+            <div class="card">
+              <!-- Stock name as primary label -->
+              <b>{{ row['Stock'] }}</b>
+              <div class="small">{{ row['Symbol'] }} • {{ row['Sector'] }}</div>
+
+              <!-- Composite score display -->
+              <div style="margin-top:6px;">
+                <div>Score: <span class="score">{{ row['Score'] }}</span></div>
+              </div>
+
+              <!-- Delivery / trade multiples -->
+              <div class="small" style="margin-top:4px;">
+                <b>Delv x:</b> {{ '%.2f'|format(row['Delv x']) }} •
+                <b>Trade x:</b> {{ '%.2f'|format(row['Trade x']) }}
+              </div>
+
+              <!-- Recommendation pill + raw signal label
+                   Pill type is chosen based on 'Recommendation' -->
+              <div style="margin-top:8px;">
+                <span class="pill {% if row['Recommendation']=='Strong Buy' %}sb{% elif row['Recommendation']=='Accumulate' %}acc{% elif row['Recommendation']=='Watch' %}watch{% else %}avoid{% endif %}">
+                  {{ row['Recommendation'] }}
+                </span>
+                <span class="pill signal">{{ row['Signal'] }}</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: Human-readable explanation of scoring rules -->
+      <div>
+        <div class="panel rules-panel">
+          <h3>Signal Rules</h3>
+
+          <!-- 1. Global scoring engine description
+               Keep this text in sync with backend scoring logic. -->
+          <p class="rules-section-title">1. Global scoring</p>
+          <p class="rules-kicker">
+            Each symbol gets a composite score from delivery, trade, price change, repeat days and trend:
+          </p>
+          <ul class="rules-list">
+            <li>Delivery vs Trade ratio: <code>ratio = Delv x / (Trade x + 0.1)</code></li>
+            <li>Delivery spike bonus when <code>Delv x &gt; 1.3 × avg Delv x</code>, else a smaller bonus if <code>Delv x &gt; avg Delv x</code></li>
+            <li>Trade spike bonus when <code>Trade x &gt; 1.5 × avg Trade x</code></li>
+            <li>Price change bonus / penalty from <code>Chg%</code> (strongly positive, mildly positive, or &lt; −3%)</li>
+            <li>Repeat‑days bonus when the symbol appears on 2+ distinct dates (extra weight for 3–4+ days)</li>
+            <li>Trend bonus when delivery shows a rising pattern across files</li>
+          </ul>
+          <p class="rules-note">
+            Recommendations are mapped from the final score:
+            <code>Strong Buy</code> ≥ 85,
+            <code>Accumulate</code> ≥ 65,
+            <code>Watch</code> ≥ 45,
+            otherwise <code>Avoid</code>.
+          </p>
+
+          <!-- 2. Top Opportunities rules: explains how left column is built -->
+          <p class="rules-section-title">2. Top Opportunities</p>
+          <p class="rules-note">
+            Shows the strongest current ideas: filter to
+            <code>Strong Buy</code> and <code>Accumulate</code> names,
+            then display the top few by score. These are the highest‑conviction
+            accumulation candidates right now.
+          </p>
+
+          <!-- 3. Pre‑Breakout Opportunities rules: cross-ref with panel below -->
+          <p class="rules-section-title">3. Pre‑Breakout Opportunities</p>
+          <p class="rules-kicker">
+            Focuses on early setups that are close to moving:
+          </p>
+          <ul class="rules-list">
+            <li>Filter to stocks with <code>Watch</code> recommendation or
+                <code>Breakout candidate</code> signal</li>
+            <li>Exclude symbols already in Top Opportunities to avoid duplication</li>
+            <li>From the remainder, show the top few by score with their
+                pre‑breakout action</li>
+          </ul>
+          <p class="rules-note">
+            This gives a watchlist of constructive names that may become future
+            Top Opportunities if follow‑through improves.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- =======================================================
+         PRE-BREAKOUT OPPORTUNITIES
+         - Secondary list of setups that are close but not yet
+           in the main Top Opportunities list.
+         - Uses 'prebreakout' dataset from backend.
+         ===================================================== -->
+    <div class="panel panel-prebreakout">
+      <h3>Pre-Breakout Opportunities</h3>
+      <div class="grid-3">
+        {% for row in prebreakout %}
+        <div class="card">
+          <b>{{ row['Stock'] }}</b>
+          <div class="small">{{ row['Symbol'] }} • {{ row['Sector'] }}</div>
+
+          <!-- Composite score for this candidate -->
+          <div style="margin-top:6px;">
+            <div>Score: <span class="score">{{ row['Score'] }}</span></div>
+          </div>
+
+          <!-- Delivery / trade context -->
+          <div class="small" style="margin-top:4px;">
+            <b>Delv x:</b> {{ '%.2f'|format(row['Delv x']) }} •
+            <b>Trade x:</b> {{ '%.2f'|format(row['Trade x']) }}
+          </div>
+
+          <!-- Extra narrative field: what to watch for next -->
+          <div class="small" style="margin-top:6px;">
+            <b>Pre-breakout action:</b> {{ row['Action'] }}
+          </div>
+
+          <!-- Recommendation + signal tags -->
+          <div style="margin-top:8px;">
+            <span class="pill {% if row['Recommendation']=='Strong Buy' %}sb{% elif row['Recommendation']=='Accumulate' %}acc{% elif row['Recommendation']=='Watch' %}watch{% else %}avoid{% endif %}">
+              {{ row['Recommendation'] }}
+            </span>
+            <span class="pill signal">{{ row['Signal'] }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- =======================================================
+         FILTER CONTROLS
+         - Free-text search across entire table row text
+         - Recommendation dropdown to filter by category
+         ===================================================== -->
+    <div class="panel">
+      <div class="filters">
+        <!-- Text search: filters by symbol, name, sector, etc. -->
+        <input id="search" placeholder="Search stock..." />
+        <!-- Recommendation filter: matches recommendation text inside row -->
+        <select id="rec">
+          <option value="">All</option>
+          <option>Strong Buy</option>
+          <option>Accumulate</option>
+          <option>Watch</option>
+          <option>Avoid</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- =======================================================
+         FULL TABLE OF RECOMMENDATIONS
+         - All historical rows with scores and attributes
+         - Filtered in-place by the JS logic below.
+         ===================================================== -->
+    <div class="panel">
+      <h3>Full Recommendation Table</h3>
+      <div class="table-wrap">
+        <table id="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Symbol / Name</th>
+              <th>Sector</th>
+              <th>Signal</th>
+              <th>Delv (x)</th>
+              <th>Trade (x)</th>
+              <th>Delivery ratio</th>
+              <th>Chg%</th>
+              <th>Appearances</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!--
+              'records' is the full dataset from backend.
+              Each 'row' is a dict with keys:
+              Date, Symbol, Stock, Sector, Signal,
+              Delv x, Trade x, Delivery ratio, Chg %, Appearances, Score
+              If you add/remove columns, keep this loop and JS filters
+              in sync with the new structure.
+            -->
+            {% for row in records %}
+            <tr>
+              <td>{{ row['Date'] }}</td>
+              <td class="symbol-cell">
+                <div class="symbol-code">{{ row['Symbol'] }}</div>
+                <div class="symbol-name">{{ row['Stock'] }}</div>
+              </td>
+              <td>{{ row['Sector'] }}</td>
+              <td>
+                <!-- Pill color is driven by FINAL recommendation,
+                     while the text shows the raw 'Signal'. -->
+                <span class="pill
+                  {% if row['Recommendation'] == 'Strong Buy' %}
+                    sb
+                  {% elif row['Recommendation'] == 'Accumulate' %}
+                    acc
+                  {% elif row['Recommendation'] == 'Watch' %}
+                    watch
+                  {% else %}
+                    avoid
+                  {% endif %}">
+                  {{ row['Signal'] }}
+                </span>
+              </td>
+              <td class="num">{{ '%.2f'|format(row['Delv x']) }}</td>
+              <td class="num">{{ '%.2f'|format(row['Trade x']) }}</td>
+              <td class="num">{{ row['Delivery ratio'] }}</td>
+              <td class="num">{{ row['Chg %'] }}</td>
+              <td class="num">{{ row['Appearances'] }}</td>
+              <td class="num"><span class="score">{{ row['Score'] }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       CLIENT-SIDE INTERACTIONS (vanilla JS)
+       - Search filter
+       - Recommendation filter
+       - Theme toggle with persistence
+       ======================================================= -->
+  <script>
+    // ---------------------------------------------------------
+    // 1. TEXT SEARCH FILTER
+    //    - Filters table rows by checking if the row's text
+    //      (symbol, name, sector, etc.) contains the search string.
+    //    - Case-insensitive search.
+    //    - If you want column‑specific search, change innerText
+    //      to look at specific <td> indices.
+    // ---------------------------------------------------------
+    document.getElementById('search').onkeyup = function(){
+      let v = this.value.toLowerCase();
+      document.querySelectorAll('#table tbody tr').forEach(r =>
+        r.style.display = r.innerText.toLowerCase().includes(v) ? '' : 'none'
+      );
+    };
+
+    // ---------------------------------------------------------
+    // 2. RECOMMENDATION DROPDOWN FILTER
+    //    - Shows only rows whose text contains selected value
+    //      (e.g., 'Strong Buy', 'Accumulate').
+    //    - If 'All' is selected, all rows are shown.
+    //    - To make filter stricter (e.g., based only on the
+    //      recommendation pill), pick that specific <td>.
+    // ---------------------------------------------------------
+    document.getElementById('rec').onchange = function(){
+      let v = this.value;
+      document.querySelectorAll('#table tbody tr').forEach(r =>
+        r.style.display = (!v || r.innerText.includes(v)) ? '' : 'none'
+      );
+    };
+
+    // ---------------------------------------------------------
+    // 3. THEME TOGGLE WITH LOCALSTORAGE
+    //    - Persists user's theme preference across reloads.
+    //    - Reads and writes 'srs-theme' key in localStorage.
+    //    - Supported values: 'light' or 'dark'.
+    //    - To add more themes, extend tokens in CSS and update
+    //      this logic to cycle through them.
+    // ---------------------------------------------------------
+
+    // Root <html> element reference (we store theme in data-theme)
+    const root = document.documentElement;
+    // Toggle button element
+    const btn = document.getElementById('theme-toggle');
+
+    // Read previously saved theme (if any)
+    const storedTheme = localStorage.getItem('srs-theme');
+    if (storedTheme === 'light' || storedTheme === 'dark') {
+      root.setAttribute('data-theme', storedTheme);
+    }
+
+    // Update button label based on current theme.
+    // Called on load and after every toggle.
+    function syncLabel(){
+      const mode = root.getAttribute('data-theme') || 'dark';
+      btn.textContent = mode === 'dark' ? 'Light mode' : 'Dark mode';
+    }
+    syncLabel();
+
+    // Click handler: flip theme and persist to localStorage
+    btn.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme') || 'dark';
+      const next = current === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('srs-theme', next);
+      syncLabel();
+    });
+  </script>
+</body>
+</html>
