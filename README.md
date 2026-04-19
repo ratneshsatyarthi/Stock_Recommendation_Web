@@ -353,9 +353,4 @@ This lets you adapt the model to different markets, timeframes, or risk profiles
 - You can move the scoring logic into a separate module (e.g., `services/scoring.py`) and call it from the Flask routes for better separation of concerns.
 - Adding tests for `read_one_csv`, `score_df`, and helper functions will make refactoring safer.
 
-## Run
-```bash
-pip install -r requirements.txt
-python app.py
-```
-Open http://127.0.0.1:5000
+
